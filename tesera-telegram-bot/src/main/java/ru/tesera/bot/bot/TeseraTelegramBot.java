@@ -7,6 +7,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import jakarta.annotation.PostConstruct;
 import java.util.List;
@@ -50,7 +51,55 @@ public class TeseraTelegramBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        // Здесь будет обработка всех входящих апдейтов (команды, сообщения и т.д.)
+        if (update.hasMessage() && update.getMessage().hasText()) {
+            String messageText = update.getMessage().getText();
+            Long chatId = update.getMessage().getChatId();
+
+            if (messageText.startsWith("/")) {
+                String[] parts = messageText.split(" ", 2);
+                String command = parts[0].substring(1); // без /
+                String args = parts.length > 1 ? parts[1] : "";
+
+                switch (command) {
+                    case "start" -> handleStart(chatId);
+                    case "addCollection" -> handleAddCollection(chatId, args);
+                    // TODO: добавить обработку других команд
+                    default -> sendMessage(chatId, "Неизвестная команда. Используйте /start для справки.");
+                }
+            }
+        }
+    }
+
+    private void handleStart(Long chatId) {
+        String text = "Привет! Я бот для планирования настольных встреч и работы с коллекциями Tesera.\n" +
+                "Доступные команды:\n" +
+                "/addCollection <ник_на_tesera> — добавить свою коллекцию игр\n" +
+                "/collections — список всех коллекций\n" +
+                "/findGame <название> — поиск игры среди участников\n" +
+                "/createMeeting <дата_время> <макс_участников> <описание> — создать встречу\n" +
+                "/subscribe <игра> — подписка на игру\n" +
+                "/subscribeDay <день_недели> — подписка на день недели";
+        sendMessage(chatId, text);
+    }
+
+    private void handleAddCollection(Long chatId, String args) {
+        if (args.isBlank()) {
+            sendMessage(chatId, "Пожалуйста, укажите ник на Tesera: /addCollection <ник_на_tesera>");
+            return;
+        }
+        // TODO: реализовать добавление коллекции через Tesera API
+        sendMessage(chatId, "Добавление коллекции для ника: " + args + " (функция в разработке)");
+    }
+
+    private void sendMessage(Long chatId, String text) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId.toString());
+        message.setText(text);
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
